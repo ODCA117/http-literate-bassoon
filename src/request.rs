@@ -1,12 +1,13 @@
-use super::header::Header;
+use super::header::{Header, parse_headers};
+use super::version::Version;
 use core::str::from_utf8;
 use heapless::Vec;
 // TODO: convert to streaming
-use nom::bytes::complete::{tag, take_till, take_until};
+use nom::bytes::complete::{tag, take_till};
 use nom::character::complete::u8 as nom_u8;
 use nom::character::multispace0;
 use nom::combinator::map_res;
-use nom::sequence::{preceded, terminated};
+use nom::sequence::preceded;
 use nom::{IResult, Parser};
 
 #[derive(Debug)]
@@ -63,21 +64,6 @@ pub struct Path<'a> {
     path: &'a str,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum Version {
-    HTTP1_1,
-    Other { major: u8, minor: u8 },
-}
-
-impl Version {
-    fn new(major: u8, minor: u8) -> Self {
-        match (major, minor) {
-            (1, 1) => Version::HTTP1_1,
-            _ => Version::Other { major, minor },
-        }
-    }
-}
-
 fn http_word(input: &[u8]) -> IResult<&[u8], &[u8]> {
     preceded(multispace0(), take_till(|b: u8| b.is_ascii_whitespace())).parse(input)
 }
@@ -86,7 +72,10 @@ fn http_method(input: &[u8]) -> IResult<&[u8], Method<'_>> {
     let (input, method) =
         preceded(multispace0(), take_till(|b: u8| b.is_ascii_whitespace())).parse(input)?;
     if method.iter().any(|b| b.is_ascii_lowercase()) {
-        return Err(nom::Err::Error(nom::error::Error::new(input, nom::error::ErrorKind::Verify)))
+        return Err(nom::Err::Error(nom::error::Error::new(
+            input,
+            nom::error::ErrorKind::Verify,
+        )));
     }
 
     let method = Method::new(method);
@@ -124,20 +113,6 @@ fn parse_reqline(input: &[u8]) -> IResult<&[u8], RequestLine<'_>> {
     };
 
     Ok((input, req_line))
-}
-
-fn parse_headers(input: &[u8]) -> IResult<&[u8], Header<'_>> {
-    let (rest, header) =
-        terminated(take_until("\r\n".as_bytes()), tag("\r\n".as_bytes())).parse(input)?;
-
-    // NOTE: Could have issues if space between name and colon
-    let (value, name) = map_res(take_until(":".as_bytes()), from_utf8).parse(header)?;
-    let (value, _) = terminated(tag(":".as_bytes()), multispace0()).parse(value)?;
-
-    let header = Header { name, value };
-
-
-    Ok((rest, header))
 }
 
 impl<'a> Request<'a> {
