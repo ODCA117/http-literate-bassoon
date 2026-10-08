@@ -1,5 +1,5 @@
 use super::header::{Header, parse_headers};
-use super::version::Version;
+use super::http_common::{HttpParseError, Version};
 use core::str::from_utf8;
 use heapless::Vec;
 // TODO: convert to streaming
@@ -9,25 +9,6 @@ use nom::character::multispace0;
 use nom::combinator::map_res;
 use nom::sequence::preceded;
 use nom::{IResult, Parser};
-
-#[derive(Debug)]
-pub enum HttpParseError {
-    Malformed,
-    InvalidUtf8,
-    TooManyHeaders,
-}
-
-type NomErr<'a> = nom::Err<nom::error::Error<&'a [u8]>>;
-
-impl<'a> From<NomErr<'a>> for HttpParseError {
-    fn from(e: NomErr<'a>) -> Self {
-        match e {
-            _ => HttpParseError::Malformed, // nom::Err::Incomplete(needed) => todo!(),
-                                            // nom::Err::Error(_) => todo!(),
-                                            // nom::Err::Failure(_) => todo!(),
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct Request<'a> {
@@ -138,8 +119,6 @@ impl<'a> Request<'a> {
             headers,
             data: body,
         };
-
-        println!("Request: {:?}", req);
 
         Ok(req)
     }
