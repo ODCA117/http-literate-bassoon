@@ -1,6 +1,7 @@
 use super::header::{Header, parse_headers};
 use super::http_common::{HttpParseError, Version};
 use core::str::from_utf8;
+use core::result::Result;
 use heapless::Vec;
 // TODO: convert to streaming
 use nom::bytes::complete::{tag, take_till};

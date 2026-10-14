@@ -1,4 +1,5 @@
 use core::str::from_utf8;
+use core::result::Result;
 
 use crate::{
     header::{Header, parse_headers},
